@@ -517,7 +517,9 @@ void ucoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 				else
 					SP[i][J]=-rho[I][J] * pow(Cmu, 0.25) * sqrt(k[I][J]) / uplus[I][J] * AREAs;
 			else
-				SP[i][J] = 0.;
+				if (i == NPI/2 -J && J < 1*NPJ/3)
+				SP[i][J] = -LARGE;
+				//SP[i][J] = 0.;
             
 			Su[i][J] = (mueff[I][J]*dudx[I][J] - mueff[I-1][J]*dudx[I-1][J]) / (x[I] - x[I-1]) + 
 			           (mun        *dvdx[i][j+1] - mus        *dvdx[i][j]) / (y_v[j+1] - y_v[j]) -
@@ -633,6 +635,14 @@ void vcoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 			aS[I][j] = max3( Fs, Ds + 0.5*Fs, 0.);
 			aN[I][j] = max3(-Fn, Dn - 0.5*Fn, 0.);
 			aPold    = 0.5*(rho[I][J-1] + rho[I][J])*AREAe*AREAn/Dt;
+			
+			/* transport of v through the baffles can be switched off by setting the coefficients to zero */
+
+			if (I == NPI/2 -J && j < 1*NPJ/3)       /* left of first baffle */
+				aE[I][j] = 0;
+
+			if (I == NPI/2+1-J && j < 1*NPJ/3)     /* right of first baffle */
+				aW[I][j] = 0;
 
 			/* eq. 8.31 without time dependent terms (see also eq. 5.14): */
 
@@ -856,6 +866,15 @@ void Tcoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 			aS[I][J] = max3( Fs, Ds + 0.5*Fs, 0.);
 			aN[I][J] = max3(-Fn, Dn - 0.5*Fn, 0.);
 			aPold    = rho[I][J]*AREAe*AREAn/Dt;
+			
+			/* transport of T through the baffles can be switched off by setting the coefficients to zero */
+
+			if (I == NPI/2 - J && J < 1*NPJ/3)       /* left of baffle */
+				aE[I][J] = 0;
+
+			if (I == NPI/2+1 -J && J < 1*NPJ/3)     /* right of baffle */
+				aW[I][J] = 0;
+				
 
 			if (I > 11*NPI/200 && I < 18*NPI/200 && J > 2*NPJ/5 && J < 3*NPJ/5){
 				SP[I][J] = -LARGE;
