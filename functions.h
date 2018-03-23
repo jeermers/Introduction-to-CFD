@@ -18,6 +18,7 @@ extern void pccoeff(double **aE, double **aW, double **aN, double **aS, double *
 extern void Tcoeff(double **aE, double **aW, double **aN, double **aS, double **aP, double **b);
 extern void epscoeff(double **aE, double **aW, double **aN, double **aS, double **aP, double **b);
 extern void kcoeff(double **aE, double **aW, double **aN, double **aS, double **aP, double **b);
+extern void fraccoeff(double **aE, double **aW, double **aN, double **aS, double **aP, double **b);
 
 extern void conv(void);
 extern void solve   (double **fi, double **b, double **aE, double **aW, double **aN, double **aS, double **aP);

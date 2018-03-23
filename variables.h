@@ -21,6 +21,7 @@ double **k;
 double **gammak;
 double **eps;
 double **gammaeps;
+double **frac;
 double **delta;
 double **uplus;
 double **yplus;
@@ -34,6 +35,7 @@ double **pc_old;
 double **T_old;
 double **k_old;
 double **eps_old;
+double **frac_old;
 
 double **dudx;
 double **dudy;
@@ -53,8 +55,8 @@ int    Jstart;
 int    Jend;
 
 int    iter;
-int    iter_u, iter_v, iter_pc, iter_T, iter_k, iter_eps;
-double relax_u, relax_v, relax_pc, relax_T;
+int    iter_u, iter_v, iter_pc, iter_T, iter_k, iter_eps, iter_frac;
+double relax_u, relax_v, relax_pc, relax_T, relax_frac;
 
 double SAVG;
 double SMAX;

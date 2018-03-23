@@ -10,6 +10,7 @@
 #define T_ITER     1         /* number of Newton iterations for T equation [-] */
 #define EPS_ITER   1         /* number of Newton iterations for Eps equation [-] */
 #define K_ITER     1         /* number of Newton iterations for K equation [-] */
+#define frac_ITER  1         /* number of Newton iterations for m equation [-] */
 #define SMAXneeded 1E-8      /* maximum accepted error in mass balance [kg/s] */
 #define SAVGneeded 1E-9      /* maximum accepted average error in mass balance [kg/s] */
 #define LARGE      1E30      /* arbitrary very large value [-] */

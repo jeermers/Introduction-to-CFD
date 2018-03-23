@@ -59,6 +59,11 @@ int main(int argc, char *argv[])
 			Tcoeff(aE, aW, aN, aS, aP, b);
 			for (iter_T = 0; iter_T < T_ITER; iter_T++)
 				solve(T, b, aE, aW, aN, aS, aP);
+			
+			fraccoeff(aE, aW, aN, aS, aP, b);
+			for (iter_frac = 0; iter_frac < frac_ITER; iter_frac++)
+				solve(frac, b, aE, aW, aN, aS, aP);	
+			
 
 			viscosity();
 
@@ -176,6 +181,7 @@ void init(void)
 			mu     [I][J] = 2.E-5;    /* Viscosity */
 			Cp     [I][J] = 1013.;     /* J/(K*kg) Heat capacity - assumed constant for this problem */
 			Gamma  [I][J] = 0.025/Cp[I][J]; /* Thermal conductivity divided by heat capacity */
+			frac   [I][J] = 0.0;	/* mass fraction */
 
 			u_old  [i][J] = u[i][J];  /* Velocity in x-direction old timestep */
 			v_old  [I][j] = v[I][j];  /* Velocity in y-direction old timestep */
@@ -183,6 +189,7 @@ void init(void)
 			T_old  [I][J] = T[I][J];  /* Temperature old timestep */
 			eps_old[I][J] = eps[I][J];  /* epsilon old timestep*/
 			k_old  [I][J] = k[I][J];    /* k old timestep*/
+			frac_old[I][J] = frac[I][J];
 		} /* for J */
 	} /* for I */
 
@@ -192,6 +199,7 @@ void init(void)
 	relax_v   = relax_u;       /* See eq. 6.37 */
 	relax_pc  = 1.1 - relax_u; /* See eq. 6.33 */
 	relax_T   = 1.0;  /* Relaxation factor for temperature */
+	relax_frac = 1.0;
 
 } /* init */
 
@@ -202,29 +210,42 @@ void bound(void)
 /***** Purpose: Specify boundary conditions for a calculation ******/
 	int    I, J, j;
 
-	/* Fixed temperature at the upper and lower wall */
+	/* Conditions at inlet */
 
 	for (J = 0; J <= NPJ + 1; J++) {
-		/* Temperature at the walls in Kelvin */
+		/* Velocity at inlet in m/s */
 		u[1][J] = U_IN; /* inlet */
 		/* u[1][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-YMAX/2.)/YMAX)); /* inlet */
 	} /* for J */
-
-	for (I = 0; I <= NPI + 1; I++) {
-		/* Temperature at the walls in Kelvin */
-		T[I][0] = 373.; /* bottom wall */
-		T[I][NPJ+1] = 273.; /* top wall */
+	
+	for (J = 0; J <= NPJ/2 + 1; J++) {
+		/* mass fraction at bottom inlet */
+		frac[0][J] = 0.; /* Inlet */
 	} /* for J */
-
+	
+	for (J = NPJ/2 + 1; J <= NPJ + 1; J++) {
+		/* mass fraction at top inlet */
+		frac[0][J] = 1.; /* Inlet */
+	} /* for J */
+	
 	for (J = 0; J <= NPJ/2 + 1; J++) {
 		/* Temperature at the inlet in Kelvin */
-		T[0][J] = 373.; /* Inlet */
+		T[0][J] = 273.; /* Inlet */
 	} /* for J */
 	
 	for (J = NPJ/2 + 1; J <= NPJ + 1; J++) {
 		/* Temperature at the inlet in Kelvin */
 		T[0][J] = 273.; /* Inlet */
 	} /* for J */
+	
+	/* Conditions at walls */	
+
+	for (I = 0; I <= NPI + 1; I++) {
+		/* Temperature at the walls in Kelvin */
+		T[I][0] = 273.; /* bottom wall */
+		T[I][NPJ+1] = 273.; /* top wall */
+	} /* for J */
+	
 	
 	globcont();
 
@@ -517,9 +538,9 @@ void ucoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 				else
 					SP[i][J]=-rho[I][J] * pow(Cmu, 0.25) * sqrt(k[I][J]) / uplus[I][J] * AREAs;
 			else
-				if (i == NPI/2 -J && J < 1*NPJ/3)
-				SP[i][J] = -LARGE;
-				//SP[i][J] = 0.;
+//				if (i == NPI/2 -J && J < 1*NPJ/3)   // baffle
+//				SP[i][J] = -LARGE;
+				SP[i][J] = 0.;
             
 			Su[i][J] = (mueff[I][J]*dudx[I][J] - mueff[I-1][J]*dudx[I-1][J]) / (x[I] - x[I-1]) + 
 			           (mun        *dvdx[i][j+1] - mus        *dvdx[i][j]) / (y_v[j+1] - y_v[j]) -
@@ -638,11 +659,11 @@ void vcoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 			
 			/* transport of v through the baffles can be switched off by setting the coefficients to zero */
 
-			if (I == NPI/2 -J && j < 1*NPJ/3)       /* left of first baffle */
-				aE[I][j] = 0;
-
-			if (I == NPI/2+1-J && j < 1*NPJ/3)     /* right of first baffle */
-				aW[I][j] = 0;
+//			if (I == NPI/2 -J && j < 1*NPJ/3)       /* left of first baffle */
+//				aE[I][j] = 0;
+//
+//			if (I == NPI/2+1-J && j < 1*NPJ/3)     /* right of first baffle */
+//				aW[I][j] = 0;
 
 			/* eq. 8.31 without time dependent terms (see also eq. 5.14): */
 
@@ -869,11 +890,11 @@ void Tcoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 			
 			/* transport of T through the baffles can be switched off by setting the coefficients to zero */
 
-			if (I == NPI/2 - J && J < 1*NPJ/3)       /* left of baffle */
-				aE[I][J] = 0;
-
-			if (I == NPI/2+1 -J && J < 1*NPJ/3)     /* right of baffle */
-				aW[I][J] = 0;
+//			if (I == NPI/2 - J && J < 1*NPJ/3)       /* left of baffle */
+//				aE[I][J] = 0;
+//
+//			if (I == NPI/2+1 -J && J < 1*NPJ/3)     /* right of baffle */
+//				aW[I][J] = 0;
 				
 
 			if (I > 11*NPI/200 && I < 18*NPI/200 && J > 2*NPJ/5 && J < 3*NPJ/5){
@@ -1086,6 +1107,107 @@ void kcoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 	
 } /*kcoeff*/
 
+
+/* ################################################################# */
+void fraccoeff(double **aE, double **aW, double **aN, double **aS, double **aP, double **b)
+/* ################################################################# */
+{
+/***** Purpose: To calculate the coefficients for the T equation. ******/
+	int    i, j, I, J;
+	double Fw, Fe, Fs, Fn, 
+	       Dw, De, Ds, Dn, 
+	       AREAw, AREAe, AREAs, AREAn,
+	       aPold;
+
+	Istart = 1;
+	Iend   = NPI;
+	Jstart = 1;
+	Jend   = NPJ;
+
+	conv();
+
+	for (I = Istart; I <= Iend; I++) {
+		i = I;
+		for (J = Jstart; J <= Jend; J++) {
+			j = J;
+			/* Geometrical parameters */
+			/* Areas of the cell faces */
+
+			AREAw = y_v[j+1] - y_v[j]; /* = A[i][J] See fig. 6.2 or fig. 6.5 */
+			AREAe = AREAw;
+			AREAs = x_u[i+1] - x_u[i]; /* = A[I][j] */
+			AREAn = AREAs;
+
+			/* The convective mass flux defined in eq. 5.8a */
+			/* note:  F = rho*u but Fw = (rho*u)w = rho*u*AREAw per definition. */
+
+			Fw = F_u[i  ][J  ]*AREAw;
+			Fe = F_u[i+1][J  ]*AREAe;
+			Fs = F_v[I  ][j  ]*AREAs;
+			Fn = F_v[I  ][j+1]*AREAn;
+
+			/* The transport by diffusion defined in eq. 5.8b */
+			/* note: D = mu/Dx but Dw = (mu/Dx)*AREAw per definition */
+
+			/* The conductivity, Gamma, at the interface is calculated */
+			/* with the use of a harmonic mean. */
+
+			Dw = Gamma[I-1][J  ]*Gamma[I  ][J  ]/(Gamma[I-1][J  ]*(x[I  ] - x_u[i  ]) + Gamma[I  ][J  ]*(x_u[i  ] - x[I-1]))*AREAw;
+			De = Gamma[I  ][J  ]*Gamma[I+1][J  ]/(Gamma[I  ][J  ]*(x[I+1] - x_u[i+1]) + Gamma[I+1][J  ]*(x_u[i+1] - x[I  ]))*AREAe;
+			Ds = Gamma[I  ][J-1]*Gamma[I  ][J  ]/(Gamma[I  ][J-1]*(y[J  ] - y_v[j  ]) + Gamma[I  ][J  ]*(y_v[j  ] - y[J-1]))*AREAs;
+			Dn = Gamma[I  ][J  ]*Gamma[I  ][J+1]/(Gamma[I  ][J  ]*(y[J+1] - y_v[j+1]) + Gamma[I  ][J+1]*(y_v[j+1] - y[J  ]))*AREAn;
+
+			/* The source terms */
+			
+
+			SP[I][J] = -min2(rho[I][J]*eps[I][J]/k[I][J]*frac[I][J], rho[I][J]*eps[I][J]/k[I][J]*(1-frac[I][J]));
+			Su[I][J] = 0.;
+
+			/* The coefficients (hybrid differencing scheme) */
+
+			aW[I][J] = max3( Fw, Dw + 0.5*Fw, 0.);
+			aE[I][J] = max3(-Fe, De - 0.5*Fe, 0.);
+			aS[I][J] = max3( Fs, Ds + 0.5*Fs, 0.);
+			aN[I][J] = max3(-Fn, Dn - 0.5*Fn, 0.);
+			aPold    = rho[I][J]*AREAe*AREAn/Dt;
+			
+			/* transport of T through the baffles can be switched off by setting the coefficients to zero */
+
+			if (I == NPI/2 - J && J < 1*NPJ/3)       /* left of baffle */
+				aE[I][J] = 0;
+
+			if (I == NPI/2+1 -J && J < 1*NPJ/3)     /* right of baffle */
+				aW[I][J] = 0;
+				
+
+//			if (I > 11*NPI/200 && I < 18*NPI/200 && J > 2*NPJ/5 && J < 3*NPJ/5){
+//				SP[I][J] = -LARGE;
+//				Su[I][J] = LARGE*373.;
+//			}
+			/* eq. 8.31 with time dependent terms (see also eq. 5.14): */
+
+			aP[I][J] = aW[I][J] + aE[I][J] + aS[I][J] + aN[I][J] + Fe - Fw + Fn - Fs - SP[I][J] + aPold;
+
+			/* Setting the source term equal to b */
+
+			b[I][J] = Su[I][J] + aPold*frac_old[I][J];
+
+			/* Introducing relaxation by eq. 6.37 . and putting also the last */
+			/* term on the right side into the source term b[i][J] */
+
+			aP[I][J] /= relax_frac;
+			b [I][J] += (1 - relax_frac)*aP[I][J]*frac[I][J];
+
+			/* now the TDMA algorithm can be called to solve the equation. */
+			/* This is done in the next step of the main program. */
+
+			} /* for J */
+		} /* for I */
+
+} /* mcoeff */
+
+
+
 /* ################################################################# */
 void calculateuplus(void)
 /* ################################################################# */
@@ -1175,9 +1297,9 @@ void output(void)
 			j = J;
 			ugrid = 0.5*(u[i][J]+u[i+1][J  ]);
 			vgrid = 0.5*(v[I][j]+v[I  ][j+1]);
-			fprintf(fp, "%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\n",
-			             x[I], y[J], ugrid, vgrid, p[I][J], T[I][J], rho[I][J], mu[I][J], Gamma[I][J], k[I][J], eps[I][J], uplus[I][J], yplus[I][J], yplus1[I][J], yplus2[I][J]);
-//			             1     2     3      4      5        6        7          8         9            10       11         12           13           14            15
+			fprintf(fp, "%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\n",
+			             x[I], y[J], ugrid, vgrid, p[I][J], T[I][J], rho[I][J], mu[I][J], Gamma[I][J], k[I][J], eps[I][J], uplus[I][J], yplus[I][J], yplus1[I][J], yplus2[I][J],frac[I][J]);
+//			             1     2     3      4      5        6        7          8         9            10       11         12           13           14            15			16
 		} /* for J */
 		fprintf(fp, "\n");
 	} /* for I */
@@ -1314,6 +1436,7 @@ void memalloc(void)
 	Cp     = double_2D_matrix(NPI + 2, NPJ + 2);
 	k      = double_2D_matrix(NPI + 2, NPJ + 2);
 	eps    = double_2D_matrix(NPI + 2, NPJ + 2);
+	frac   = double_2D_matrix(NPI + 2, NPJ + 2);
     delta  = double_2D_matrix(NPI + 2, NPJ + 2);
 	E      = double_2D_matrix(NPI + 2, NPJ + 2);
 	E2     = double_2D_matrix(NPI + 2, NPJ + 2);
@@ -1329,6 +1452,7 @@ void memalloc(void)
 	T_old  = double_2D_matrix(NPI + 2, NPJ + 2);
 	k_old  = double_2D_matrix(NPI + 2, NPJ + 2);
 	eps_old= double_2D_matrix(NPI + 2, NPJ + 2);
+	frac_old  = double_2D_matrix(NPI + 2, NPJ + 2);
 
 	dudx   = double_2D_matrix(NPI + 2, NPJ + 2);
 	dudy   = double_2D_matrix(NPI + 2, NPJ + 2);
