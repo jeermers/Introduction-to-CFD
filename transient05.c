@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 /* ################################################################# */
 {
 	int    iter_u, iter_v, iter_pc, iter_T, iter_eps, iter_k;
-	double du, dv, time, TOTAL_TIME = 10.;
+	double du, dv, time, TOTAL_TIME = 100.;
 	
 	init();
 	bound(); /* apply boundary conditions */
@@ -160,7 +160,7 @@ void init(void)
 
 	m_in  = 1.;
 	m_out = 1.;
-	Dt    = 1.E-1;
+	Dt    = 5.E-1;
 
 	for (I = 0; I <= NPI + 1; I++) {
 		i = I;
@@ -169,7 +169,7 @@ void init(void)
 			u      [i][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-YMAX/2.)/YMAX));     /* Velocity in x-direction */
 			v      [I][j] = 0.;       /* Velocity in y-direction */
 			p      [I][J] = 0.;       /* Relative pressure */
-			T      [I][J] = 273.;     /* Temperature */
+			T      [I][J] = 0.;     /* Temperature */
 			k      [I][J] = 1e-3;     /* k */
 			eps    [I][J] = 1e-4;     /* epsilon */
 			uplus  [I][J] = 1.;                                            /* uplus */
@@ -181,7 +181,7 @@ void init(void)
 			mu     [I][J] = 2.E-5;    /* Viscosity */
 			Cp     [I][J] = 1013.;     /* J/(K*kg) Heat capacity - assumed constant for this problem */
 			Gamma  [I][J] = 0.025/Cp[I][J]; /* Thermal conductivity divided by heat capacity */
-			frac   [I][J] = 0.0;	/* mass fraction */
+			frac   [I][J] = 0.;	/* mass fraction */
 
 			u_old  [i][J] = u[i][J];  /* Velocity in x-direction old timestep */
 			v_old  [I][j] = v[I][j];  /* Velocity in y-direction old timestep */
@@ -214,28 +214,26 @@ void bound(void)
 
 	for (J = 0; J <= NPJ + 1; J++) {
 		/* Velocity at inlet in m/s */
-		u[1][J] = U_IN; /* inlet */
+		 u[1][J] = U_IN; /* inlet */
 		/* u[1][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-YMAX/2.)/YMAX)); /* inlet */
 	} /* for J */
 	
-	for (J = 0; J <= NPJ/2 + 1; J++) {
-		/* mass fraction at bottom inlet */
-		frac[0][J] = 0.; /* Inlet */
-	} /* for J */
 	
-	for (J = NPJ/2 + 1; J <= NPJ + 1; J++) {
-		/* mass fraction at top inlet */
+
+	for (J = 0; J <= NPJ/2 + 1; J++) {
+		/* Temperature at the inlet in Kelvin */
+		T[0][J] = 273.; /* Inlet */
+		
+		/* mass fraction at bottom inlet */
 		frac[0][J] = 1.; /* Inlet */
 	} /* for J */
 	
-	for (J = 0; J <= NPJ/2 + 1; J++) {
-		/* Temperature at the inlet in Kelvin */
-		T[0][J] = 273.; /* Inlet */
-	} /* for J */
-	
 	for (J = NPJ/2 + 1; J <= NPJ + 1; J++) {
 		/* Temperature at the inlet in Kelvin */
 		T[0][J] = 273.; /* Inlet */
+		
+		/* mass fraction at top inlet */
+		frac[0][J] = 0.; /* Inlet */
 	} /* for J */
 	
 	/* Conditions at walls */	
@@ -244,6 +242,9 @@ void bound(void)
 		/* Temperature at the walls in Kelvin */
 		T[I][0] = 273.; /* bottom wall */
 		T[I][NPJ+1] = 273.; /* top wall */
+		
+//		 frac[I][0] = 0.;  
+//		 frac[I][NPJ+1] = 1.; 
 	} /* for J */
 	
 	
@@ -262,7 +263,19 @@ void bound(void)
 
 	for (J = 0; J <= NPJ+1; J++) {
 		T[NPI+1][J] = T[NPI][J];
+		
+		frac[NPI+1][J] = frac[NPI][J];
 	} /* for J */
+	
+	for (I = 0; I <= NPI + 1; I++) {
+		/* Temperature at the walls in Kelvin */
+		T[I][0] = T[I][1]; /* bottom wall */
+		T[I][NPJ+1] = T[I][NPJ]; /* top wall */
+		
+		 frac[I][0] = frac[I][1];  
+		 frac[I][NPJ+1] = frac[I][NPJ]; 
+	} /* for J */
+
 
 	for (J = 0; J <= NPJ + 1; J++) {
 		k[0][J] = 2./3.*sqr(U_IN*Ti); /* inlet */
@@ -790,7 +803,8 @@ void storeresults(void)
 			pc_old[I][J]  = pc[I][J];
 			T_old[I][J]   = T[I][J];
 			eps_old[I][J] = eps[I][J];
-			k_old[I][J]   = k[I][J];				
+			k_old[I][J]   = k[I][J];
+			frac_old[I][J]= frac[I][J];				
       }
 
 } /* storeresults */
@@ -897,10 +911,10 @@ void Tcoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 //				aW[I][J] = 0;
 				
 
-			if (I > 11*NPI/200 && I < 18*NPI/200 && J > 2*NPJ/5 && J < 3*NPJ/5){
-				SP[I][J] = -LARGE;
-				Su[I][J] = LARGE*373.;
-			}
+//			if (I > 11*NPI/200 && I < 18*NPI/200 && J > 2*NPJ/5 && J < 3*NPJ/5){
+//				SP[I][J] = -LARGE;
+//				Su[I][J] = LARGE*373.;
+//			}
 
 			/* eq. 8.31 with time dependent terms (see also eq. 5.14): */
 
@@ -1112,7 +1126,7 @@ void kcoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 void fraccoeff(double **aE, double **aW, double **aN, double **aS, double **aP, double **b)
 /* ################################################################# */
 {
-/***** Purpose: To calculate the coefficients for the T equation. ******/
+/***** Purpose: To calculate the coefficients for the frac equation. ******/
 	int    i, j, I, J;
 	double Fw, Fe, Fs, Fn, 
 	       Dw, De, Ds, Dn, 
@@ -1146,6 +1160,7 @@ void fraccoeff(double **aE, double **aW, double **aN, double **aS, double **aP, 
 			Fs = F_v[I  ][j  ]*AREAs;
 			Fn = F_v[I  ][j+1]*AREAn;
 
+			
 			/* The transport by diffusion defined in eq. 5.8b */
 			/* note: D = mu/Dx but Dw = (mu/Dx)*AREAw per definition */
 
@@ -1158,9 +1173,8 @@ void fraccoeff(double **aE, double **aW, double **aN, double **aS, double **aP, 
 			Dn = Gamma[I  ][J  ]*Gamma[I  ][J+1]/(Gamma[I  ][J  ]*(y[J+1] - y_v[j+1]) + Gamma[I  ][J+1]*(y_v[j+1] - y[J  ]))*AREAn;
 
 			/* The source terms */
-			
 
-			SP[I][J] = -min2(rho[I][J]*eps[I][J]/k[I][J]*frac[I][J], rho[I][J]*eps[I][J]/k[I][J]*(1-frac[I][J]));
+			SP[I][J] = 0.;
 			Su[I][J] = 0.;
 
 			/* The coefficients (hybrid differencing scheme) */
@@ -1171,19 +1185,20 @@ void fraccoeff(double **aE, double **aW, double **aN, double **aS, double **aP, 
 			aN[I][J] = max3(-Fn, Dn - 0.5*Fn, 0.);
 			aPold    = rho[I][J]*AREAe*AREAn/Dt;
 			
-			/* transport of T through the baffles can be switched off by setting the coefficients to zero */
+//			/* transport of frac through the baffles can be switched off by setting the coefficients to zero */
 
-			if (I == NPI/2 - J && J < 1*NPJ/3)       /* left of baffle */
-				aE[I][J] = 0;
-
-			if (I == NPI/2+1 -J && J < 1*NPJ/3)     /* right of baffle */
-				aW[I][J] = 0;
+//			if (I == NPI/2 - J && J < 1*NPJ/3)       /* left of baffle */
+//				aE[I][J] = 0;
+//
+//			if (I == NPI/2+1 -J && J < 1*NPJ/3)     /* right of baffle */
+//				aW[I][J] = 0;
 				
 
 //			if (I > 11*NPI/200 && I < 18*NPI/200 && J > 2*NPJ/5 && J < 3*NPJ/5){
 //				SP[I][J] = -LARGE;
 //				Su[I][J] = LARGE*373.;
 //			}
+
 			/* eq. 8.31 with time dependent terms (see also eq. 5.14): */
 
 			aP[I][J] = aW[I][J] + aE[I][J] + aS[I][J] + aN[I][J] + Fe - Fw + Fn - Fs - SP[I][J] + aPold;
@@ -1204,7 +1219,7 @@ void fraccoeff(double **aE, double **aW, double **aN, double **aS, double **aP, 
 			} /* for J */
 		} /* for I */
 
-} /* mcoeff */
+} /* fraccoeff */
 
 
 
