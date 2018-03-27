@@ -76,3 +76,11 @@ double m_out;
 double *relax;
 
 double omega;
+
+double dy;
+double L;
+double **lm;
+double **dUdy;
+double **nut;
+double **gammat;
+double **gammaeff;

@@ -63,9 +63,11 @@ int main(int argc, char *argv[])
 			fraccoeff(aE, aW, aN, aS, aP, b);
 			for (iter_frac = 0; iter_frac < frac_ITER; iter_frac++)
 				solve(frac, b, aE, aW, aN, aS, aP);	
+				
 			
-
+            derivatives();
 			viscosity();
+			gamma_effective();
 
 			bound();
 			storeresults(); /* Store data at current time level in arrays for "old" data*/
@@ -160,7 +162,7 @@ void init(void)
 
 	m_in  = 1.;
 	m_out = 1.;
-	Dt    = 5.E-1;
+	Dt    = 1.E-1;
 
 	for (I = 0; I <= NPI + 1; I++) {
 		i = I;
@@ -169,7 +171,7 @@ void init(void)
 			u      [i][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-YMAX/2.)/YMAX));     /* Velocity in x-direction */
 			v      [I][j] = 0.;       /* Velocity in y-direction */
 			p      [I][J] = 0.;       /* Relative pressure */
-			T      [I][J] = 0.;     /* Temperature */
+			T      [I][J] = 100.;     /* Temperature */
 			k      [I][J] = 1e-3;     /* k */
 			eps    [I][J] = 1e-4;     /* epsilon */
 			uplus  [I][J] = 1.;                                            /* uplus */
@@ -181,7 +183,7 @@ void init(void)
 			mu     [I][J] = 2.E-5;    /* Viscosity */
 			Cp     [I][J] = 1013.;     /* J/(K*kg) Heat capacity - assumed constant for this problem */
 			Gamma  [I][J] = 0.025/Cp[I][J]; /* Thermal conductivity divided by heat capacity */
-			frac   [I][J] = 0.;	/* mass fraction */
+			frac   [I][J] = 0.2;	/* mass fraction */
 
 			u_old  [i][J] = u[i][J];  /* Velocity in x-direction old timestep */
 			v_old  [I][j] = v[I][j];  /* Velocity in y-direction old timestep */
@@ -214,12 +216,11 @@ void bound(void)
 
 	for (J = 0; J <= NPJ + 1; J++) {
 		/* Velocity at inlet in m/s */
-		 u[1][J] = U_IN; /* inlet */
-		/* u[1][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-YMAX/2.)/YMAX)); /* inlet */
+//		 u[1][J] = U_IN; /* inlet */
+		 u[1][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-YMAX/2.)/YMAX)); /* inlet */
 	} /* for J */
 	
 	
-
 	for (J = 0; J <= NPJ/2 + 1; J++) {
 		/* Temperature at the inlet in Kelvin */
 		T[0][J] = 273.; /* Inlet */
@@ -271,6 +272,8 @@ void bound(void)
 		/* Temperature at the walls in Kelvin */
 		T[I][0] = T[I][1]; /* bottom wall */
 		T[I][NPJ+1] = T[I][NPJ]; /* top wall */
+//		T[I][0] = 273.;
+//		T[I][NPJ+1] = 273.;
 		
 		 frac[I][0] = frac[I][1];  
 		 frac[I][NPJ+1] = frac[I][NPJ]; 
@@ -1161,16 +1164,17 @@ void fraccoeff(double **aE, double **aW, double **aN, double **aS, double **aP, 
 			Fn = F_v[I  ][j+1]*AREAn;
 
 			
+		
 			/* The transport by diffusion defined in eq. 5.8b */
 			/* note: D = mu/Dx but Dw = (mu/Dx)*AREAw per definition */
 
 			/* The conductivity, Gamma, at the interface is calculated */
 			/* with the use of a harmonic mean. */
 
-			Dw = Gamma[I-1][J  ]*Gamma[I  ][J  ]/(Gamma[I-1][J  ]*(x[I  ] - x_u[i  ]) + Gamma[I  ][J  ]*(x_u[i  ] - x[I-1]))*AREAw;
-			De = Gamma[I  ][J  ]*Gamma[I+1][J  ]/(Gamma[I  ][J  ]*(x[I+1] - x_u[i+1]) + Gamma[I+1][J  ]*(x_u[i+1] - x[I  ]))*AREAe;
-			Ds = Gamma[I  ][J-1]*Gamma[I  ][J  ]/(Gamma[I  ][J-1]*(y[J  ] - y_v[j  ]) + Gamma[I  ][J  ]*(y_v[j  ] - y[J-1]))*AREAs;
-			Dn = Gamma[I  ][J  ]*Gamma[I  ][J+1]/(Gamma[I  ][J  ]*(y[J+1] - y_v[j+1]) + Gamma[I  ][J+1]*(y_v[j+1] - y[J  ]))*AREAn;
+			Dw = gammaeff[I-1][J  ]*gammaeff[I  ][J  ]/(gammaeff[I-1][J  ]*(x[I  ] - x_u[i  ]) + gammaeff[I  ][J  ]*(x_u[i  ] - x[I-1]))*AREAw;
+			De = gammaeff[I  ][J  ]*gammaeff[I+1][J  ]/(gammaeff[I  ][J  ]*(x[I+1] - x_u[i+1]) + gammaeff[I+1][J  ]*(x_u[i+1] - x[I  ]))*AREAe;
+			Ds = gammaeff[I  ][J-1]*gammaeff[I  ][J  ]/(gammaeff[I  ][J-1]*(y[J  ] - y_v[j  ]) + gammaeff[I  ][J  ]*(y_v[j  ] - y[J-1]))*AREAs;
+			Dn = gammaeff[I  ][J  ]*gammaeff[I  ][J+1]/(gammaeff[I  ][J  ]*(y[J+1] - y_v[j+1]) + gammaeff[I  ][J+1]*(y_v[j+1] - y[J  ]))*AREAn;
 
 			/* The source terms */
 
@@ -1280,6 +1284,28 @@ void viscosity(void)
 
 } /* viscosity */
 
+void gamma_effective(void)
+{
+	int I, J, i, j;
+	
+	dy = YMAX/NPJ;
+	L  = YMAX/2;
+	for (I = 0; I <= NPI; I++)
+	{
+		i=I;
+		for (J = 1; J <= NPJ + 1; J++) 
+		{
+			j=J;
+			
+			lm[I][J] = L*(0.14-0.08*sqr(1-dy*J/L)-0.06*sqr(sqr(1-dy*J/L)));
+			dUdy[I][J] = (dudy[i][j]+dudy[i][j+1]+dudy[i+1][j]+dudy[i+1][j+1]) / 4;
+			nut[I][J] = sqr(lm[I][J])*abs(dUdy[I][J]);
+			gammat[I][J] = nut[I][J]*rho[I][J]/sigmat;
+			gammaeff[I][J] = Gamma[I][J] + gammat[I][J];
+		}
+	}
+}
+
 /* ################################################################# */
 void printConv(double time, int iter)
 /* ################################################################# */
@@ -1312,9 +1338,9 @@ void output(void)
 			j = J;
 			ugrid = 0.5*(u[i][J]+u[i+1][J  ]);
 			vgrid = 0.5*(v[I][j]+v[I  ][j+1]);
-			fprintf(fp, "%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\n",
-			             x[I], y[J], ugrid, vgrid, p[I][J], T[I][J], rho[I][J], mu[I][J], Gamma[I][J], k[I][J], eps[I][J], uplus[I][J], yplus[I][J], yplus1[I][J], yplus2[I][J],frac[I][J]);
-//			             1     2     3      4      5        6        7          8         9            10       11         12           13           14            15			16
+			fprintf(fp, "%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\n",
+			             x[I], y[J], ugrid, vgrid, p[I][J], T[I][J], rho[I][J], mu[I][J], Gamma[I][J], k[I][J], eps[I][J], uplus[I][J], yplus[I][J], yplus1[I][J], yplus2[I][J],frac[I][J],gammaeff[I][J],gammat[I][J],lm[I][J]);
+//			             1     2     3      4      5        6        7          8         9            10       11         12           13           14            15			16			17				18		   19
 		} /* for J */
 		fprintf(fp, "\n");
 	} /* for I */
@@ -1448,6 +1474,11 @@ void memalloc(void)
 	mut    = double_2D_matrix(NPI + 2, NPJ + 2);
 	mueff  = double_2D_matrix(NPI + 2, NPJ + 2);
 	Gamma  = double_2D_matrix(NPI + 2, NPJ + 2);
+	gammat = double_2D_matrix(NPI + 2, NPJ + 2);
+	gammaeff = double_2D_matrix(NPI + 2, NPJ + 2);
+	lm     = double_2D_matrix(NPI + 2, NPJ + 2);
+	dUdy   = double_2D_matrix(NPI + 2, NPJ + 2);
+	nut    = double_2D_matrix(NPI + 2, NPJ + 2);
 	Cp     = double_2D_matrix(NPI + 2, NPJ + 2);
 	k      = double_2D_matrix(NPI + 2, NPJ + 2);
 	eps    = double_2D_matrix(NPI + 2, NPJ + 2);

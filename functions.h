@@ -31,6 +31,7 @@ extern void storeresults(void);
 
 extern void calculateuplus(void);
 extern void viscosity(void);
+extern void gamma_effective(void);
 
 extern void output(void);
 extern void printConv(double time, int iter);
