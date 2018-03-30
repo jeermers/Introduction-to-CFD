@@ -63,6 +63,8 @@ int main(int argc, char *argv[])
 			fraccoeff(aE, aW, aN, aS, aP, b);
 			for (iter_frac = 0; iter_frac < frac_ITER; iter_frac++)
 				solve(frac, b, aE, aW, aN, aS, aP);	
+			IntOfSegr();
+			PressureDrop();
 				
 			
             derivatives();
@@ -216,17 +218,24 @@ void bound(void)
 
 	for (J = 0; J <= NPJ + 1; J++) {
 		/* Velocity at inlet in m/s */
-//		 u[1][J] = U_IN; /* inlet */
-		 u[1][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-YMAX/2.)/YMAX)); /* inlet */
+		 u[1][J] = U_IN; /* inlet */
+//		 u[1][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-YMAX/2.)/YMAX)); /* inlet */
 	} /* for J */
 	
+//	for (J = 0; J<= NPJ/2 ; J++) {
+//		u[1][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-(YMAX/2)/2.)/(YMAX/2))); /* inlet lower part */
+//	}
+//	for (J = NPJ/2 + 1; J<= NPJ +1; J++){
+//		u[1][J] = U_IN*1.5*(1.-sqr(2.*(y[J-(NPJ/2+1)]-(YMAX/2)/2.)/(YMAX/2))); /* inlet lower part */
+//	}
 	
-	for (J = 0; J <= NPJ/2 + 1; J++) {
+	
+	for (J = 0; J <= NPJ/2; J++) {
 		/* Temperature at the inlet in Kelvin */
 		T[0][J] = 273.; /* Inlet */
 		
 		/* mass fraction at bottom inlet */
-		frac[0][J] = 1.; /* Inlet */
+		frac[0][J] = frac_lower; /* Inlet */
 	} /* for J */
 	
 	for (J = NPJ/2 + 1; J <= NPJ + 1; J++) {
@@ -234,7 +243,7 @@ void bound(void)
 		T[0][J] = 273.; /* Inlet */
 		
 		/* mass fraction at top inlet */
-		frac[0][J] = 0.; /* Inlet */
+		frac[0][J] = frac_upper; /* Inlet */
 	} /* for J */
 	
 	/* Conditions at walls */	
@@ -1227,13 +1236,50 @@ void fraccoeff(double **aE, double **aW, double **aN, double **aS, double **aP, 
 
 
 
+void IntOfSegr(void)
+{
+	int I = NPI;
+	int J;
+	frac_avg = ( frac_lower + frac_upper ) / 2.;
+	IoS = 0.;
+	frac_end = 0.;
+	frac_inlet = 0;
+	
+	for (J = 0; J <= NPJ+1; J++){
+		IoS_loc[J] = sqr((frac[I][J]-frac_avg))/ (frac_avg * (1. - frac_avg));
+		IoS += IoS_loc[J];
+		frac_end += frac[I][J];
+		frac_inlet += frac[0][J];
+	}
+	IoS = IoS / (NPJ+2);
+	frac_end = frac_end / (NPJ+2);
+	frac_inlet = frac_inlet / (NPJ+2);
+}
+
+void PressureDrop(void)
+{
+	int I, J;
+	p_inlet = 0;
+	p_outlet = 0;
+	
+	for (J = 0; J<= NPJ+1; J++){
+		p_inlet += p[1][J];
+		p_outlet += p[NPI+1][J];
+	}
+	p_inlet = p_inlet / (NPJ+2);
+	p_outlet = p_outlet / (NPJ+2);
+	dp = p_outlet - p_inlet;
+}
+
+
+
 /* ################################################################# */
 void calculateuplus(void)
 /* ################################################################# */
 {
 /***** Purpose: Calculate uplus, yplus and tw  ******/
 
-	int    i,j,I, J;
+	int    i,j,I,J;
 
 	viscosity();
 
@@ -1297,7 +1343,7 @@ void gamma_effective(void)
 		{
 			j=J;
 			
-			lm[I][J] = L*(0.14-0.08*sqr(1-dy*J/L)-0.06*sqr(sqr(1-dy*J/L)));
+			lm[I][J] = L*(0.14-0.08*sqr((1-dy*J/L))-0.06*sqr(sqr((1-dy*J/L))));
 			dUdy[I][J] = (dudy[i][j]+dudy[i][j+1]+dudy[i+1][j]+dudy[i+1][j+1]) / 4;
 			nut[I][J] = sqr(lm[I][J])*abs(dUdy[I][J]);
 			gammat[I][J] = nut[I][J]*rho[I][J]/sigmat;
@@ -1312,10 +1358,12 @@ void printConv(double time, int iter)
 {
 /***** Purpose: Creating result table ******/
 	if (time == Dt)
-		printf ("iter\t Time\t u\t v\t T\t SMAX\t SAVG\n");
+		printf ("iter\t Time\t Ios\t mean frac end\t dp\n");
 
-	printf ("%4d %10.3e\t%10.2e\t%10.2e\t%10.2e\t%10.2e\t%10.2e\n", 
-             iter, time, u[3*NPI/10][2*NPJ/5], v[3*NPI/10][2*NPJ/5], T[3*NPI/10][2*NPJ/5], SMAX, SAVG);
+	printf ("%4d %10.3e\t%10.2e\t%10.2e\t%10.2e\n", 
+             iter, time, IoS, frac_end, dp);
+             
+	
 
 } /* printConv */
 
@@ -1326,7 +1374,7 @@ void output(void)
 /***** Purpose: Creating result table ******/
 	int    I, J, i, j;
 	double ugrid, vgrid,stream,vorticity;
-	FILE   *fp, *str, *velu, *velv, *vort;
+	FILE   *fp, *fpp, *str, *velu, *velv, *vort;
 
 /* Plot all results in output.dat */
 
@@ -1338,14 +1386,22 @@ void output(void)
 			j = J;
 			ugrid = 0.5*(u[i][J]+u[i+1][J  ]);
 			vgrid = 0.5*(v[I][j]+v[I  ][j+1]);
-			fprintf(fp, "%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\n",
-			             x[I], y[J], ugrid, vgrid, p[I][J], T[I][J], rho[I][J], mu[I][J], Gamma[I][J], k[I][J], eps[I][J], uplus[I][J], yplus[I][J], yplus1[I][J], yplus2[I][J],frac[I][J],gammaeff[I][J],gammat[I][J],lm[I][J]);
-//			             1     2     3      4      5        6        7          8         9            10       11         12           13           14            15			16			17				18		   19
+			fprintf(fp, "%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t11.5e\t%11.5e\t%11.5e\t%11.5e\n",
+			             x[I], y[J], ugrid, vgrid, p[I][J], T[I][J], rho[I][J], mu[I][J], Gamma[I][J], k[I][J], eps[I][J], uplus[I][J], yplus[I][J], yplus1[I][J], yplus2[I][J],frac[I][J],IoS_loc[I], IoS);
+//			             1     2     3      4      5        6        7          8         9            10       11         12           13           14            15			16			17			18
 		} /* for J */
 		fprintf(fp, "\n");
 	} /* for I */
 
 	fclose(fp);
+	
+	fpp = fopen("output_IoS.dat", "w");
+	
+	for (J = 0; J<= NPJ; J++) {
+		fprintf(fpp, "%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\t%11.5e\n", y[J], IoS_loc[J], IoS,dp);
+		//														  1     2           3
+	}
+	fclose(fpp);
 
 /* Plot vorticity in vort.dat */
 
@@ -1357,7 +1413,7 @@ void output(void)
 			j = J;
 			vorticity = (u[i][J] - u[i][J-1]) / (y[J] - y[J-1]) - (v[I][j] - v[I-1][j]) / (x[I] - x[I-1]);
 			fprintf(vort, "%11.5e\t%11.5e\t%11.5e\n",
-			             x[I], y[J], vorticity);
+			             y[I], y[J], vorticity);
 		} /* for J */
 		fprintf(vort, "\n");
 	} /* for I */
@@ -1463,6 +1519,8 @@ void memalloc(void)
 	x_u  = double_1D_array(NPI + 2);
 	y    = double_1D_array(NPJ + 2);
 	y_v  = double_1D_array(NPJ + 2);
+	
+	IoS_loc = double_1D_array(NPJ + 2);
 
 	u      = double_2D_matrix(NPI + 2, NPJ + 2);
 	v      = double_2D_matrix(NPI + 2, NPJ + 2);

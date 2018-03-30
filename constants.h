@@ -1,6 +1,6 @@
-#define NPI        40        /* number of grid cells in x-direction [-] */
+#define NPI        100        /* number of grid cells in x-direction [-] */
 #define NPJ        40        /* number of grid cells in y-direction [-] */
-#define XMAX       40.0      /* width of the domain [m] */ 
+#define XMAX       10.0      /* width of the domain [m] */ 
 #define YMAX       0.2       /* height of the domain [m] */
 #define PI         3.1415927 /* value of pi [-] */
 #define MAX_ITER   100       /* maximum number of outer iterations [-] */
@@ -17,6 +17,8 @@
 #define SMALL      1E-30     /* arbitrary very small value [-] */
 #define P_ATM      101000.   /* athmospheric pressure [Pa] */
 #define U_IN       1.0       /* in flow velocity [m/s] */
+#define frac_lower 0.0       /* fraction in lower part of the channel */
+#define frac_upper 1.0       /* fraction in upper part of the channel */
 
 #define Cmu        0.09
 #define sigmak       1.

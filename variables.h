@@ -28,6 +28,14 @@ double **yplus;
 double **yplus1;
 double **yplus2;
 double **tw;
+double *IoS_loc;
+double IoS;
+double frac_avg;
+double frac_end;
+double frac_inlet;
+double p_inlet;
+double p_outlet;
+double dp;
 
 double **u_old;
 double **v_old;
