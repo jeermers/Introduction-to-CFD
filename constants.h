@@ -1,5 +1,5 @@
-#define NPI        300        /* number of grid cells in x-direction [-] */
-#define NPJ        120        /* number of grid cells in y-direction [-] */
+#define NPI        200        /* number of grid cells in x-direction [-] */
+#define NPJ        80        /* number of grid cells in y-direction [-] */
 #define XMAX       10.0      /* width of the domain [m] */ 
 #define YMAX       0.2       /* height of the domain [m] */
 #define PI         3.1415927 /* value of pi [-] */
@@ -16,7 +16,7 @@
 #define LARGE      1E30      /* arbitrary very large value [-] */
 #define SMALL      1E-30     /* arbitrary very small value [-] */
 #define P_ATM      101000.   /* athmospheric pressure [Pa] */
-#define U_IN       0.1       /* in flow velocity [m/s] */
+#define U_IN       0.2       /* in flow velocity [m/s] */
 #define frac_lower 0.0       /* fraction in lower part of the channel */
 #define frac_upper 1.0       /* fraction in upper part of the channel */
 
@@ -30,5 +30,5 @@
 #define ERough     9.793
 #define Ti         0.04
 
-#define PosBaffle  50	/* Position of the baffle (in case of one baffle) expressed in # of gridcells */
-#define LengthBaffle  20		/* Length of the baffle expressed in # of gridcells */
+#define PosBaffle  0.5*NPI	/* Position of the baffle (in case of one baffle) expressed in # of gridcells */
+#define LengthBaffle  0.5*NPJ		/* Length of the baffle expressed in # of gridcells */
