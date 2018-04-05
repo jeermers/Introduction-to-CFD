@@ -565,7 +565,11 @@ void ucoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 			else
 				if (i == PosBaffle && J < LengthBaffle)   // baffle
 				SP[i][J] = LARGE;
-				if (i == PosBaffle2 && J < LengthBaffle)   // baffle
+				if (i == PosBaffle + DistBaffle && J < LengthBaffle)   // baffle
+				SP[i][J] = LARGE;
+				if (i == PosBaffle + 2*DistBaffle && J < LengthBaffle)   // baffle
+				SP[i][J] = LARGE;
+				if (i == PosBaffle + 3*DistBaffle && J < LengthBaffle)   // baffle
 				SP[i][J] = LARGE;
 //				SP[i][J] = 0.;
             
@@ -693,10 +697,22 @@ void vcoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 			if (I == PosBaffle + 1 && j < LengthBaffle)     /* right of first baffle */
 				aW[I][j] = 0;
 				
-		    if (I == PosBaffle2 && j < LengthBaffle)       /* left of first baffle */
+		    if (I == PosBaffle + DistBaffle && j < LengthBaffle)       /* left of second baffle */
 				aE[I][j] = 0;
 
-			if (I == PosBaffle2 + 1 && j < LengthBaffle)     /* right of first baffle */
+			if (I == PosBaffle + DistBaffle + 1 && j < LengthBaffle)     /* right of second baffle */
+				aW[I][j] = 0;
+				
+			if (I == PosBaffle + 2*DistBaffle && j < LengthBaffle)       /* left of third baffle */
+				aE[I][j] = 0;
+
+			if (I == PosBaffle + 2*DistBaffle + 1 && j < LengthBaffle)     /* right of third baffle */
+				aW[I][j] = 0;
+				
+			if (I == PosBaffle + 3*DistBaffle && j < LengthBaffle)       /* left of fourth baffle */
+				aE[I][j] = 0;
+
+			if (I == PosBaffle + 3*DistBaffle + 1 && j < LengthBaffle)     /* right of fourth baffle */
 				aW[I][j] = 0;
 
 			/* eq. 8.31 without time dependent terms (see also eq. 5.14): */
@@ -1215,10 +1231,22 @@ void fraccoeff(double **aE, double **aW, double **aN, double **aS, double **aP, 
 			if (I == PosBaffle + 1 && J < LengthBaffle)     /* right of baffle */
 				aW[I][J] = 0;
 				
-			if (I == PosBaffle2 && J < LengthBaffle)       /* left of baffle */
+			if (I == PosBaffle + DistBaffle && J < LengthBaffle)       /* left of baffle */
 				aE[I][J] = 0;
 
-			if (I == PosBaffle2 + 1 && J < LengthBaffle)     /* right of baffle */
+			if (I == PosBaffle + DistBaffle + 1 && J < LengthBaffle)     /* right of baffle */
+				aW[I][J] = 0;
+				
+			if (I == PosBaffle + 2*DistBaffle && J < LengthBaffle)       /* left of baffle */
+				aE[I][J] = 0;
+
+			if (I == PosBaffle + 2*DistBaffle + 1 && J < LengthBaffle)     /* right of baffle */
+				aW[I][J] = 0;
+				
+			if (I == PosBaffle + 3*DistBaffle && J < LengthBaffle)       /* left of baffle */
+				aE[I][J] = 0;
+
+			if (I == PosBaffle + 3*DistBaffle + 1 && J < LengthBaffle)     /* right of baffle */
 				aW[I][J] = 0;
 				
 

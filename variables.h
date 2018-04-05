@@ -36,6 +36,7 @@ double frac_inlet;
 double p_inlet;
 double p_outlet;
 double dp;
+double **test;
 
 double **u_old;
 double **v_old;

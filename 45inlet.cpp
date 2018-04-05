@@ -186,7 +186,7 @@ void init(void)
 			Cp     [I][J] = 4180.;     /* J/(K*kg) Heat capacity - assumed constant for this problem */
 			Gamma  [I][J] = 0.025/Cp[I][J]; /* Thermal conductivity divided by heat capacity */
 			frac   [I][J] = 0.2;	/* mass fraction */
-
+		
 			u_old  [i][J] = u[i][J];  /* Velocity in x-direction old timestep */
 			v_old  [I][j] = v[I][j];  /* Velocity in y-direction old timestep */
 			pc_old [I][J] = pc[I][J]; /* Pressure correction old timestep */
@@ -216,11 +216,21 @@ void bound(void)
 
 	/* Conditions at inlet */
 
-	for (J = 0; J <= NPJ + 1; J++) {
+	for (J = 0 + 1; J <= NPJ/2; J++) {
 		/* Velocity at inlet in m/s */
-		 u[1][J] = U_IN; /* inlet */
+		 u[1][J] = U_IN*0.7071067812; /* inlet */
+		 v[1][J] = -V_IN*0.7071067812; /* inlet */
 //		 u[1][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-YMAX/2.)/YMAX)); /* inlet */
 	} /* for J */
+
+	for (J = NPJ/2 + 1; J <= NPJ + 1; J++) {
+		/* Velocity at inlet in m/s */
+		 u[1][J] = U_IN;/*0.7071067812; /* inlet */
+		 /*v[1][J] = -V_IN*0.7071067812; /* inlet */
+//		 u[1][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-YMAX/2.)/YMAX)); /* inlet */
+	} /* for J */
+	
+	
 	
 //	for (J = 0; J<= NPJ/2 ; J++) {
 //		u[1][J] = U_IN*1.5*(1.-sqr(2.*(y[J]-(YMAX/2)/2.)/(YMAX/2))); /* inlet lower part */
@@ -563,11 +573,15 @@ void ucoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 				else
 					SP[i][J]=-rho[I][J] * pow(Cmu, 0.25) * sqrt(k[I][J]) / uplus[I][J] * AREAs;
 			else
-				if (i == PosBaffle && J < LengthBaffle)   // baffle
-				SP[i][J] = LARGE;
-				if (i == PosBaffle2 && J < LengthBaffle)   // baffle
-				SP[i][J] = LARGE;
-//				SP[i][J] = 0.;
+//				if (i == PosBaffle && J < LengthBaffle)   // baffle
+//				SP[i][J] = LARGE;
+//				if (i == PosBaffle + DistBaffle && J < LengthBaffle)   // baffle
+//				SP[i][J] = LARGE;
+//				if (i == PosBaffle + 2*DistBaffle && J < LengthBaffle)   // baffle
+//				SP[i][J] = LARGE;
+//				if (i == PosBaffle + 3*DistBaffle && J < LengthBaffle)   // baffle
+//				SP[i][J] = LARGE;
+				SP[i][J] = 0.;
             
 			Su[i][J] = (mueff[I][J]*dudx[I][J] - mueff[I-1][J]*dudx[I-1][J]) / (x[I] - x[I-1]) + 
 			           (mun        *dvdx[i][j+1] - mus        *dvdx[i][j]) / (y_v[j+1] - y_v[j]) -
@@ -687,17 +701,29 @@ void vcoeff(double **aE, double **aW, double **aN, double **aS, double **aP, dou
 			
 			/* transport of v through the baffles can be switched off by setting the coefficients to zero */
 
-			if (I == PosBaffle && j < LengthBaffle)       /* left of first baffle */
-				aE[I][j] = 0;
-
-			if (I == PosBaffle + 1 && j < LengthBaffle)     /* right of first baffle */
-				aW[I][j] = 0;
-				
-		    if (I == PosBaffle2 && j < LengthBaffle)       /* left of first baffle */
-				aE[I][j] = 0;
-
-			if (I == PosBaffle2 + 1 && j < LengthBaffle)     /* right of first baffle */
-				aW[I][j] = 0;
+//			if (I == PosBaffle && j < LengthBaffle)       /* left of first baffle */
+//				aE[I][j] = 0;
+//
+//			if (I == PosBaffle + 1 && j < LengthBaffle)     /* right of first baffle */
+//				aW[I][j] = 0;
+//				
+//		    if (I == PosBaffle + DistBaffle && j < LengthBaffle)       /* left of second baffle */
+//				aE[I][j] = 0;
+//
+//			if (I == PosBaffle + DistBaffle + 1 && j < LengthBaffle)     /* right of second baffle */
+//				aW[I][j] = 0;
+//				
+//			if (I == PosBaffle + 2*DistBaffle && j < LengthBaffle)       /* left of third baffle */
+//				aE[I][j] = 0;
+//
+//			if (I == PosBaffle + 2*DistBaffle + 1 && j < LengthBaffle)     /* right of third baffle */
+//				aW[I][j] = 0;
+//				
+//			if (I == PosBaffle + 3*DistBaffle && j < LengthBaffle)       /* left of fourth baffle */
+//				aE[I][j] = 0;
+//
+//			if (I == PosBaffle + 3*DistBaffle + 1 && j < LengthBaffle)     /* right of fourth baffle */
+//				aW[I][j] = 0;
 
 			/* eq. 8.31 without time dependent terms (see also eq. 5.14): */
 
@@ -1209,17 +1235,29 @@ void fraccoeff(double **aE, double **aW, double **aN, double **aS, double **aP, 
 			
 //			/* transport of frac through the baffles can be switched off by setting the coefficients to zero */
 
-			if (I == PosBaffle && J < LengthBaffle)       /* left of baffle */
-				aE[I][J] = 0;
-
-			if (I == PosBaffle + 1 && J < LengthBaffle)     /* right of baffle */
-				aW[I][J] = 0;
-				
-			if (I == PosBaffle2 && J < LengthBaffle)       /* left of baffle */
-				aE[I][J] = 0;
-
-			if (I == PosBaffle2 + 1 && J < LengthBaffle)     /* right of baffle */
-				aW[I][J] = 0;
+//			if (I == PosBaffle && J < LengthBaffle)       /* left of baffle */
+//				aE[I][J] = 0;
+//
+//			if (I == PosBaffle + 1 && J < LengthBaffle)     /* right of baffle */
+//				aW[I][J] = 0;
+//				
+//			if (I == PosBaffle + DistBaffle && J < LengthBaffle)       /* left of baffle */
+//				aE[I][J] = 0;
+//
+//			if (I == PosBaffle + DistBaffle + 1 && J < LengthBaffle)     /* right of baffle */
+//				aW[I][J] = 0;
+//				
+//			if (I == PosBaffle + 2*DistBaffle && J < LengthBaffle)       /* left of baffle */
+//				aE[I][J] = 0;
+//
+//			if (I == PosBaffle + 2*DistBaffle + 1 && J < LengthBaffle)     /* right of baffle */
+//				aW[I][J] = 0;
+//				
+//			if (I == PosBaffle + 3*DistBaffle && J < LengthBaffle)       /* left of baffle */
+//				aE[I][J] = 0;
+//
+//			if (I == PosBaffle + 3*DistBaffle + 1 && J < LengthBaffle)     /* right of baffle */
+//				aW[I][J] = 0;
 				
 
 //			if (I > 11*NPI/200 && I < 18*NPI/200 && J > 2*NPJ/5 && J < 3*NPJ/5){
